@@ -45,7 +45,7 @@ export function Footer() {
           <ul className="mt-5 flex flex-wrap gap-x-1.5 text-[15px] leading-[1.7] text-link">
             {TOPICS.map((t, i) => (
               <li key={t}>
-                <Link to={`/simulasi?topik=${t.toLowerCase()}`} className="hover:text-ink hover:underline underline-offset-2">
+                <Link to={`/simulasi?topik=${t.toLowerCase()}`} className="inline-flex min-h-8 items-center hover:text-ink hover:underline underline-offset-2 pointer-coarse:min-h-11">
                   #{t.toLowerCase()}
                 </Link>
                 {i < TOPICS.length - 1 ? "," : null}
@@ -57,7 +57,7 @@ export function Footer() {
 
       <div className="flex flex-col gap-3 pb-12 pt-4 text-muted sm:flex-row sm:justify-between">
         <span>1729, oleh Toriq Afanudin, S.Pd.</span>
-        <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="link">
+        <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="link inline-flex min-h-11 items-center self-start sm:self-auto">
           Kembali ke atas
         </button>
       </div>

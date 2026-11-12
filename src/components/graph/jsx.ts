@@ -63,12 +63,17 @@ export function createFrame(board: SimBoard, axisNumbers: boolean) {
 /** Bulatkan ke kelipatan `step` tanpa sisa desimal. */
 export const snapTo = (v: number, step: number) => Math.round((Math.round(v / step) * step) * 1e6) / 1e6 || 0;
 
-/** Titik yang bisa diseret. */
+export const isTouch = () => typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+
+/** Ukuran titik bawaan: lebih besar di layar sentuh. */
+export const defaultPointSize = () => (isTouch() ? 9 : 6);
+
+/** Titik yang bisa diseret. Di layar sentuh dibuat lebih besar supaya mudah ditangkap jari. */
 export function handle(board: SimBoard, x: number, y: number, color: string): El {
   return board.create("point", [x, y], {
     name: "",
     withLabel: false,
-    size: 6,
+    size: defaultPointSize(),
     fillColor: color,
     strokeColor: "#ffffff",
     strokeWidth: 2,

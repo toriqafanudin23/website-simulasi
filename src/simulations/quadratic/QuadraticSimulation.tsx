@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { fmt } from "../../lib";
 import { M, Rich, tex } from "../../components/ui/Math";
 import { buttonClass } from "../../components/ui/Button";
+import { SimulationShell } from "../../components/layout/SimulationShell";
+import { FullscreenPanel } from "../../components/graph/FullscreenPanel";
+import { TabPanel, type TabDef } from "../../components/graph/PanelTabs";
 import { DEFAULT_STEP, ParamSlider, STEPS, StepSelector, type Step } from "../../components/graph/ParamControls";
-import { Check, Section, SwatchRow } from "./Controls";
-import { COLORS } from "../../components/graph/jsx";
-import { QuadraticBoard, type Show } from "./QuadraticBoard";
+import { Check, Section, SizeStepper, SwatchRow } from "../../components/graph/Controls";
+import { COLORS, defaultPointSize } from "../../components/graph/jsx";
+import { QuadraticBoard, type Show, type Sizes } from "./QuadraticBoard";
 import {
   DEFAULT_QUAD,
   PARAMS,
@@ -23,6 +25,13 @@ import {
 const Q_KEY = "1729.quadratic.q";
 const SHOW_KEY = "1729.quadratic.show";
 const STEP_KEY = "1729.quadratic.step";
+const SIZE_KEY = "1729.quadratic.sizes";
+
+const CURVE_RANGE = { min: 1, max: 8 } as const;
+const POINT_RANGE = { min: 3, max: 14 } as const;
+const defaultSizes = (): Sizes => ({ curve: 3, point: defaultPointSize() });
+const clamp = (v: unknown, min: number, max: number, fallback: number) =>
+  typeof v === "number" && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : fallback;
 
 const DEFAULT_SHOW: Show = {
   grid: true,
@@ -74,8 +83,13 @@ const MODES: { mode: Mode; name: string }[] = [
   { mode: "factor", name: "Bentuk faktor" },
 ];
 
-const barBtn =
-  "inline-flex min-h-10 items-center justify-center bg-tint px-3 text-[15px] font-medium text-ink transition-colors duration-150 hover:bg-ink hover:text-white short:min-h-8 md:px-4";
+type Tab = "param" | "mode" | "result" | "more";
+const TABS: readonly TabDef<Tab>[] = [
+  { id: "param", label: "Parameter" },
+  { id: "mode", label: "Bentuk" },
+  { id: "result", label: "Hasil" },
+  { id: "more", label: "Lainnya" },
+];
 
 export default function QuadraticSimulation() {
   const [q, setQ] = useState<Quad>(initialQuad);
@@ -85,8 +99,12 @@ export default function QuadraticSimulation() {
     const s = readStored<number>(STEP_KEY);
     return (STEPS as readonly number[]).includes(s ?? -1) ? (s as Step) : DEFAULT_STEP;
   });
-  const [full, setFull] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [sizes, setSizes] = useState<Sizes>(() => {
+    const d = defaultSizes();
+    const s = readStored<Partial<Sizes>>(SIZE_KEY);
+    return { curve: clamp(s?.curve, CURVE_RANGE.min, CURVE_RANGE.max, d.curve), point: clamp(s?.point, POINT_RANGE.min, POINT_RANGE.max, d.point) };
+  });
+  const [tab, setTab] = useState<Tab>("param");
 
   const d = useMemo(() => derive(q), [q]);
   // Bentuk puncak dan faktor hanya masuk akal bila parabola dan (untuk faktor) punya akar real.
@@ -105,69 +123,22 @@ export default function QuadraticSimulation() {
         localStorage.setItem(Q_KEY, JSON.stringify(q));
         localStorage.setItem(SHOW_KEY, JSON.stringify(show));
         localStorage.setItem(STEP_KEY, JSON.stringify(step));
+        localStorage.setItem(SIZE_KEY, JSON.stringify(sizes));
         window.history.replaceState(window.history.state, "", `?a=${q.a}&b=${q.b}&c=${q.c}`);
       } catch {
         /* penyimpanan bisa saja ditolak */
       }
     }, 300);
     return () => clearTimeout(t);
-  }, [q, show, step]);
+  }, [q, show, step, sizes]);
 
   const onParam = useCallback((key: string, v: number) => setQ((cur) => setParam(cur, mode, key, v)), [mode]);
   const toggle = (k: keyof Show) => setShow((s) => ({ ...s, [k]: !s[k] }));
 
-  /* Layar penuh: grafik memenuhi layar, kontrol berpindah ke bilah mengambang. */
-  const rootRef = useRef<HTMLDivElement>(null);
-  const native = useRef(false);
-  const enterFull = async () => {
-    setFull(true);
-    try {
-      await rootRef.current?.requestFullscreen?.();
-      native.current = !!document.fullscreenElement;
-    } catch {
-      /* tanpa API layar penuh, tampilan tetap memenuhi jendela */
-    }
-  };
-  const exitFull = async () => {
-    setFull(false);
-    try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-    } catch {
-      /* abaikan */
-    }
-    native.current = false;
-  };
-  useEffect(() => {
-    const onChange = () => {
-      if (native.current && !document.fullscreenElement) {
-        native.current = false;
-        setFull(false);
-      }
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !native.current) setFull(false);
-    };
-    document.addEventListener("fullscreenchange", onChange);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("fullscreenchange", onChange);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, []);
-
-  const share = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl(q));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      window.prompt("Salin tautan ini", shareUrl(q));
-    }
-  };
-
   const reset = () => {
     setQ(DEFAULT_QUAD);
     setShow(DEFAULT_SHOW);
+    setSizes(defaultSizes());
     setWanted("general");
   };
 
@@ -175,169 +146,136 @@ export default function QuadraticSimulation() {
   const params = PARAMS[mode];
 
   return (
-    <div ref={rootRef} className="flex h-dvh flex-col bg-white">
-      {full ? null : (
-        <header className="shrink-0">
-          <div className="flex h-14 items-center justify-between gap-3 px-4 short:h-11 md:px-6">
-            <div className="flex min-w-0 items-center gap-3">
-              <Link to="/" aria-label="1729, beranda" className="shrink-0">
-                <svg viewBox="0 0 80 80" aria-hidden="true" className="size-9 short:size-7">
-                  <rect width="80" height="80" className="fill-ink" />
-                  <path d="M12 66 C 30 66, 32 14, 40 14 S 50 66, 68 66" fill="none" strokeWidth={5} className="stroke-curve" />
-                </svg>
-              </Link>
-              <nav aria-label="Jejak" className="flex min-w-0 items-center gap-2 text-[15px]">
-                <Link to="/simulasi" className="hidden text-muted transition-colors hover:text-ink sm:inline">
-                  Simulasi
-                </Link>
-                <span aria-hidden="true" className="hidden text-muted sm:inline">/</span>
-                <h1 className="truncate font-serif text-[17px] font-bold">Fungsi Kuadrat</h1>
-              </nav>
-            </div>
-            <div className="flex shrink-0 gap-2">
-              <button type="button" className={barBtn} onClick={share} aria-live="polite">
-                {copied ? "Tautan disalin" : "Bagikan"}
-              </button>
-              <button type="button" className={barBtn} onClick={enterFull}>
-                Layar penuh
-              </button>
+    <SimulationShell
+      title="Fungsi Kuadrat"
+      shareUrl={() => shareUrl(q)}
+      tabs={TABS}
+      tab={tab}
+      onTab={setTab}
+      overlay={<M t={equation} />}
+      board={(full) => (
+        <QuadraticBoard q={q} show={show} step={step} sizes={sizes} onChange={setQ} onToggleGrid={() => toggle("grid")} fullscreen={full} />
+      )}
+      fullscreenPanel={(barClass) => (
+        <FullscreenPanel buttonClass={barClass}>
+          <div className="mb-2 flex items-center gap-3">
+            <span className="shrink-0 text-[14px] text-muted">Langkah</span>
+            <div className="min-w-0 flex-1">
+              <StepSelector small value={step} onChange={setStep} />
             </div>
           </div>
-          <div aria-hidden="true" className="h-1 bg-ink short:h-0.5" />
-        </header>
+          <div className="flex flex-col gap-1">
+            {params.map((p) => (
+              <ParamSlider key={p.key} compact tex={p.tex} min={p.min} max={p.max} step={step} value={values[p.key]} onChange={(v) => onParam(p.key, v)} />
+            ))}
+          </div>
+        </FullscreenPanel>
       )}
-
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row short:flex-row">
-        <div
-          className={`relative min-h-0 md:order-2 short:order-2 ${
-            full ? "flex-1" : "h-[46dvh] shrink-0 md:h-auto md:flex-1 short:h-auto short:flex-1"
-          }`}
-        >
-          <QuadraticBoard q={q} show={show} step={step} onChange={setQ} onToggleGrid={() => toggle("grid")}>
-            <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] bg-white/90 px-3 py-1.5 text-[19px] text-ink">
-              <M t={equation} />
+      panel={
+        <>
+          <TabPanel id="mode" active={tab === "mode"}>
+          <Section title="Bentuk persamaan" hint="Pilih bentuk yang ingin kamu ubah. Dua bentuk lainnya ikut berubah.">
+            <div role="radiogroup" aria-label="Bentuk persamaan" className="flex flex-col gap-0.5">
+              {MODES.map(({ mode: m, name }) => {
+                const on = mode === m;
+                const ok = available[m];
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    disabled={!ok}
+                    onClick={() => {
+                      setWanted(m);
+                      setTab("param");
+                    }}
+                    className={`w-full px-4 py-2.5 text-left transition-colors duration-150 ${
+                      on ? "bg-ink text-white" : "bg-white text-ink enabled:hover:bg-brand enabled:hover:text-white"
+                    } disabled:cursor-not-allowed disabled:text-muted`}
+                  >
+                    <span className="block text-[13px] opacity-75">
+                      {name}
+                      {ok ? "" : m === "factor" && d.isQuad ? " (tidak ada akar real)" : " (a = 0)"}
+                    </span>
+                    <span className="block text-[17px]">{ok ? <M t={`f(x) = ${texOf(q, m)}`} /> : "—"}</span>
+                  </button>
+                );
+              })}
             </div>
+          </Section>
+          </TabPanel>
+          <TabPanel id="param" active={tab === "param"}>
+          <Section title="Parameter" hint="Ubah dengan tombol − dan +, geser slider, ketik nilainya, atau seret titik berwarna di grafik.">
+            <p className="mb-1.5 text-[14px] text-muted">Besar perubahan per langkah</p>
+            <StepSelector value={step} onChange={setStep} />
+            <div className="mt-3 flex flex-col">
+              {params.map((p) => (
+                <ParamSlider key={`${mode}-${p.key}`} tex={p.tex} min={p.min} max={p.max} step={step} value={values[p.key]} onChange={(v) => onParam(p.key, v)} />
+              ))}
+            </div>
+          </Section>
+          </TabPanel>
+          <TabPanel id="result" active={tab === "result"}>
+          <Section title="Hasil" hint="Klik kotak warna untuk menampilkan atau menyembunyikan objek di grafik.">
+            <ul className="flex flex-col gap-0.5">
+              <SwatchRow color={COLORS.curve} on={show.curve} onToggle={() => toggle("curve")} label="Kurva">
+                <M t={equation} />
+              </SwatchRow>
+              <SwatchRow color={COLORS.reference} on={show.reference} onToggle={() => toggle("reference")} label="Kurva pembanding">
+                <M t="g(x) = x^2" />
+              </SwatchRow>
+              <SwatchRow color={COLORS.symmetry} on={show.symmetry} onToggle={() => toggle("symmetry")} label="Sumbu simetri">
+                {d.isQuad ? <M t={`x = ${N(d.h)}`} /> : "—"}
+              </SwatchRow>
+              <SwatchRow color={COLORS.vertex} on={show.vertex} onToggle={() => toggle("vertex")} label="Titik puncak">
+                {d.isQuad ? <M t={`P(${N(d.h)}, ${N(d.k)})`} /> : "—"}
+              </SwatchRow>
+              <SwatchRow color={COLORS.roots} on={show.roots} onToggle={() => toggle("roots")} label="Akar">
+                {d.roots.length === 0 ? (
+                  <span className="text-[16px] text-muted">tidak ada akar real</span>
+                ) : d.roots.length === 1 ? (
+                  <M t={d.isQuad ? `x_1 = x_2 = ${N(d.roots[0])}` : `x = ${N(d.roots[0])}`} />
+                ) : (
+                  <M t={`x_1 = ${N(d.roots[0])},\\ x_2 = ${N(d.roots[1])}`} />
+                )}
+              </SwatchRow>
+              <SwatchRow color={COLORS.intercept} on={show.intercept} onToggle={() => toggle("intercept")} label="Titik potong sumbu y">
+                <M t={`C(0, ${N(q.c)})`} />
+              </SwatchRow>
+              <SwatchRow>
+                {d.isQuad ? <M t={`D = b^2 - 4ac = ${N(d.D)}`} /> : <M t="D = \text{—}" />}
+              </SwatchRow>
+            </ul>
+          </Section>
+          </TabPanel>
+          <TabPanel id="more" active={tab === "more"}>
+          <Section title="Tampilan">
+            <Check checked={show.grid} onChange={() => toggle("grid")}>Kisi</Check>
+            <Check checked={show.axisNumbers} onChange={() => toggle("axisNumbers")}>Angka pada sumbu</Check>
+            <Check checked={show.pointLabels} onChange={() => toggle("pointLabels")}>Koordinat titik</Check>
+            <Check checked={show.snap} onChange={() => toggle("snap")}>Tempel ke kelipatan {step} saat menyeret</Check>
+            <div className="mt-2 flex flex-col">
+              <SizeStepper label="Tebal kurva" value={sizes.curve} {...CURVE_RANGE} onChange={(curve) => setSizes((z) => ({ ...z, curve }))} />
+              <SizeStepper label="Ukuran titik" value={sizes.point} {...POINT_RANGE} onChange={(point) => setSizes((z) => ({ ...z, point }))} />
+            </div>
+            <button type="button" onClick={reset} className={buttonClass("soft", "mt-3 w-full")}>
+              Atur ulang
+            </button>
+          </Section>
 
-            {full ? (
-              <>
-                <button type="button" onClick={exitFull} className={`${barBtn} absolute right-3 top-3`}>
-                  Keluar layar penuh
-                </button>
-                <div className="absolute bottom-10 left-3 right-[68px] max-w-3xl bg-white/90 px-4 py-1.5 backdrop-blur-sm">
-                  <div className="mb-1 flex items-center gap-3">
-                    <span className="shrink-0 text-[14px] text-muted">Langkah</span>
-                    <div className="w-60 max-w-full">
-                      <StepSelector small value={step} onChange={setStep} />
-                    </div>
-                  </div>
-                  <div className="grid gap-x-5 sm:grid-cols-3">
-                    {params.map((p) => (
-                      <ParamSlider key={p.key} compact tex={p.tex} min={p.min} max={p.max} step={step} value={values[p.key]} onChange={(v) => onParam(p.key, v)} />
-                    ))}
-                  </div>
-                </div>
-              </>
-            ) : null}
-          </QuadraticBoard>
-        </div>
-
-        {full ? null : (
-          <aside
-            aria-label="Kontrol simulasi"
-            className="min-h-0 flex-1 overflow-y-auto bg-tint md:order-1 md:w-[380px] md:flex-none short:order-1 short:w-[310px] short:flex-none"
-          >
-            <Section title="Bentuk persamaan" hint="Pilih bentuk yang ingin kamu ubah. Dua bentuk lainnya ikut berubah.">
-              <div role="radiogroup" aria-label="Bentuk persamaan" className="flex flex-col gap-0.5">
-                {MODES.map(({ mode: m, name }) => {
-                  const on = mode === m;
-                  const ok = available[m];
-                  return (
-                    <button
-                      key={m}
-                      type="button"
-                      role="radio"
-                      aria-checked={on}
-                      disabled={!ok}
-                      onClick={() => setWanted(m)}
-                      className={`w-full px-4 py-2.5 text-left transition-colors duration-150 ${
-                        on ? "bg-ink text-white" : "bg-white text-ink enabled:hover:bg-brand enabled:hover:text-white"
-                      } disabled:cursor-not-allowed disabled:text-muted`}
-                    >
-                      <span className="block text-[13px] opacity-75">
-                        {name}
-                        {ok ? "" : m === "factor" && d.isQuad ? " (tidak ada akar real)" : " (a = 0)"}
-                      </span>
-                      <span className="block text-[17px]">{ok ? <M t={`f(x) = ${texOf(q, m)}`} /> : "—"}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </Section>
-
-            <Section title="Parameter" hint="Ubah dengan tombol − dan +, geser slider, ketik nilainya, atau seret titik berwarna di grafik.">
-              <p className="mb-1.5 text-[14px] text-muted">Besar perubahan per langkah</p>
-              <StepSelector value={step} onChange={setStep} />
-              <div className="mt-3 flex flex-col">
-                {params.map((p) => (
-                  <ParamSlider key={`${mode}-${p.key}`} tex={p.tex} min={p.min} max={p.max} step={step} value={values[p.key]} onChange={(v) => onParam(p.key, v)} />
-                ))}
-              </div>
-            </Section>
-
-            <Section title="Hasil" hint="Klik kotak warna untuk menampilkan atau menyembunyikan objek di grafik.">
-              <ul className="flex flex-col gap-0.5">
-                <SwatchRow color={COLORS.curve} on={show.curve} onToggle={() => toggle("curve")} label="Kurva">
-                  <M t={equation} />
-                </SwatchRow>
-                <SwatchRow color={COLORS.reference} on={show.reference} onToggle={() => toggle("reference")} label="Kurva pembanding">
-                  <M t="g(x) = x^2" />
-                </SwatchRow>
-                <SwatchRow color={COLORS.symmetry} on={show.symmetry} onToggle={() => toggle("symmetry")} label="Sumbu simetri">
-                  {d.isQuad ? <M t={`x = ${N(d.h)}`} /> : "—"}
-                </SwatchRow>
-                <SwatchRow color={COLORS.vertex} on={show.vertex} onToggle={() => toggle("vertex")} label="Titik puncak">
-                  {d.isQuad ? <M t={`P(${N(d.h)}, ${N(d.k)})`} /> : "—"}
-                </SwatchRow>
-                <SwatchRow color={COLORS.roots} on={show.roots} onToggle={() => toggle("roots")} label="Akar">
-                  {d.roots.length === 0 ? (
-                    <span className="text-[16px] text-muted">tidak ada akar real</span>
-                  ) : d.roots.length === 1 ? (
-                    <M t={d.isQuad ? `x_1 = x_2 = ${N(d.roots[0])}` : `x = ${N(d.roots[0])}`} />
-                  ) : (
-                    <M t={`x_1 = ${N(d.roots[0])},\\ x_2 = ${N(d.roots[1])}`} />
-                  )}
-                </SwatchRow>
-                <SwatchRow color={COLORS.intercept} on={show.intercept} onToggle={() => toggle("intercept")} label="Titik potong sumbu y">
-                  <M t={`C(0, ${N(q.c)})`} />
-                </SwatchRow>
-                <SwatchRow>
-                  {d.isQuad ? <M t={`D = b^2 - 4ac = ${N(d.D)}`} /> : <M t="D = \text{—}" />}
-                </SwatchRow>
-              </ul>
-            </Section>
-
-            <Section title="Tampilan">
-              <Check checked={show.grid} onChange={() => toggle("grid")}>Kisi</Check>
-              <Check checked={show.axisNumbers} onChange={() => toggle("axisNumbers")}>Angka pada sumbu</Check>
-              <Check checked={show.pointLabels} onChange={() => toggle("pointLabels")}>Koordinat titik</Check>
-              <Check checked={show.snap} onChange={() => toggle("snap")}>Tempel ke kelipatan {step} saat menyeret</Check>
-              <button type="button" onClick={reset} className={buttonClass("soft", "mt-3 w-full")}>
-                Atur ulang
-              </button>
-            </Section>
-
-            <Section title="Catatan">
-              <div className="flex flex-col gap-3 text-[16px] leading-[1.6] text-body">
-                {notes(q).map((t, i) => (
-                  <p key={i}>
-                    <Rich text={t} />
-                  </p>
-                ))}
-              </div>
-            </Section>
-          </aside>
-        )}
-      </div>
-    </div>
+          <Section title="Catatan">
+            <div className="flex flex-col gap-3 text-[16px] leading-[1.6] text-body">
+              {notes(q).map((t, i) => (
+                <p key={i}>
+                  <Rich text={t} />
+                </p>
+              ))}
+            </div>
+          </Section>
+          </TabPanel>
+        </>
+      }
+    />
   );
 }

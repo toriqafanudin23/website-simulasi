@@ -7,14 +7,16 @@ interface Props {
   /** Status kisi saat ini; tombol kisi hanya tampil bila `onToggleGrid` diberikan. */
   grid?: boolean;
   onToggleGrid?: () => void;
+  /** Deret mendatar (layar penuh). Tanpa ini: mendatar di layar sempit, menurun mulai md atau saat ponsel diputar. */
+  horizontal?: boolean;
 }
 
 const btn = "grid size-11 place-items-center bg-white text-ink transition-colors duration-150 hover:bg-brand hover:text-white";
 
 /** Tombol perbesar, perkecil, dan kembalikan tampilan di pojok kanan bawah papan. */
-export function BoardControls({ onZoomIn, onZoomOut, onReset, grid = true, onToggleGrid }: Props) {
+export function BoardControls({ onZoomIn, onZoomOut, onReset, grid = true, onToggleGrid, horizontal = false }: Props) {
   return (
-    <div className="absolute bottom-3 right-3 z-10 flex flex-col gap-px border border-line bg-line">
+    <div className={`absolute bottom-3 right-3 z-10 flex gap-px border border-line bg-line ${horizontal ? "flex-row" : "flex-row md:flex-col short:flex-col"}`}>
       <button type="button" className={btn} aria-label="Perbesar" onClick={onZoomIn}>
         <PlusIcon />
       </button>

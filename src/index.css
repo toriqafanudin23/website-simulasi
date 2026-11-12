@@ -28,10 +28,13 @@
   h1, h2, h3 {
     @apply font-serif font-bold text-ink;
   }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
   p { text-wrap: pretty; }
   ::selection { @apply bg-brand text-white; }
   :focus-visible { outline: 3px solid var(--color-curve); outline-offset: 2px; }
   button { cursor: pointer; }
+  /* Tanpa jeda ketuk dan tanpa zoom dobel-ketuk pada kontrol; cubit untuk zoom halaman tetap jalan. */
+  a, button, input, label, summary, [role="radio"], [role="switch"], [role="tab"] { touch-action: manipulation; }
   @media (prefers-reduced-motion: no-preference) {
     html { scroll-behavior: smooth; }
   }

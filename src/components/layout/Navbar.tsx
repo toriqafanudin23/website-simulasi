@@ -16,13 +16,13 @@ export function Navbar() {
     <header className="container-page pt-8 md:pt-[60px]">
       <div className="flex flex-wrap items-center justify-between gap-x-10 gap-y-5">
         <Logo />
-        <nav aria-label="Utama" className="flex gap-7 text-[17px]">
+        <nav aria-label="Utama" className="flex w-full justify-between text-[17px] md:w-auto md:gap-7 md:justify-start">
           {LINKS.map((l) => (
             <NavLink
               key={l.to}
               to={l.to}
               className={({ isActive }) =>
-                `underline-offset-4 transition-colors hover:text-link hover:underline ${
+                `inline-flex min-h-11 items-center underline-offset-4 transition-colors hover:text-link hover:underline ${
                   isActive && l.to === pathname ? "text-link underline" : "text-ink"
                 }`
               }

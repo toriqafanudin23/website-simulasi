@@ -37,7 +37,7 @@ export function ParabolaWorkspace() {
       <div aria-hidden="true" className="h-1 bg-ink" />
       <div className="grid border border-t-0 border-line bg-tint lg:grid-cols-[minmax(300px,340px)_1fr]">
       {/* Grafik di atas pada ponsel, di kanan pada layar lebar. */}
-      <div className="h-[380px] sm:h-[480px] lg:order-2 lg:h-auto lg:min-h-[580px]">
+      <div className="h-[340px] sm:h-[480px] lg:order-2 lg:h-auto lg:min-h-[580px]">
         <ParabolaBoard step={step} a={a} h={h} k={k} onVertexChange={(nh, nk) => setP((s) => ({ ...s, h: nh, k: nk }))} />
       </div>
 
@@ -48,7 +48,7 @@ export function ParabolaWorkspace() {
             type="button"
             onClick={() => setP(START)}
             disabled={!changed}
-            className="px-2 py-1 text-[13px] text-link underline underline-offset-2 transition-colors hover:text-ink disabled:pointer-events-none disabled:opacity-0"
+            className="inline-flex min-h-8 items-center px-2 text-[14px] text-link underline underline-offset-2 transition-colors hover:text-ink disabled:pointer-events-none disabled:opacity-0 pointer-coarse:min-h-11"
           >
             Atur ulang
           </button>

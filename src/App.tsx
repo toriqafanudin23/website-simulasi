@@ -7,6 +7,7 @@ import { LandingPage } from "./pages/LandingPage";
 const PlaceholderPage = lazy(() => import("./pages/PlaceholderPage"));
 
 const QuadraticSimulation = lazy(() => import("./simulations/quadratic/QuadraticSimulation"));
+const DerivativeSimulation = lazy(() => import("./simulations/derivative/DerivativeSimulation"));
 
 const page = (kind: "katalog" | "simulasi" | "tentang" | "404") => (
   <Suspense fallback={null}>
@@ -23,6 +24,14 @@ export function App() {
         element={
           <Suspense fallback={<div className="h-dvh bg-white" />}>
             <QuadraticSimulation />
+          </Suspense>
+        }
+      />
+      <Route
+        path="simulasi/turunan"
+        element={
+          <Suspense fallback={<div className="h-dvh bg-white" />}>
+            <DerivativeSimulation />
           </Suspense>
         }
       />

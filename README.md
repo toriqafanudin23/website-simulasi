@@ -11,5 +11,7 @@ Aturan UI: putih, slate, aksen sky; tanpa sudut membulat; tanpa border pada tomb
 
 - `src/components/layout`: Navbar, Footer, Layout
 - `src/components/graph`: kanvas grafik interaktif di beranda (tanpa dependensi)
+- `src/components/layout/SimulationShell.tsx`: kerangka halaman simulasi (header, papan, tab kontrol, layar penuh) yang dipakai semua simulasi
+- `src/simulations/quadratic`, `src/simulations/derivative`: simulasi fungsi kuadrat dan turunan
 - `src/components/ui/Reveal.tsx`: animasi muncul saat di-scroll (satu IntersectionObserver bersama)
 - `src/data/simulations.ts`: daftar 15 simulasi dari proyek lama (metadata saja)

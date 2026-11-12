@@ -18,6 +18,12 @@ export interface Show {
   intercept: boolean;
 }
 
+/** Ketebalan kurva dan ukuran titik yang bisa diatur pengguna. */
+export interface Sizes {
+  curve: number;
+  point: number;
+}
+
 interface Scene {
   grid: El;
   axes: AxisEl[];
@@ -38,16 +44,19 @@ interface Props {
   show: Show;
   /** Besar langkah parameter; titik yang diseret menempel ke kelipatannya bila "tempel" aktif. */
   step: number;
+  sizes: Sizes;
   onChange: (q: Quad) => void;
   onToggleGrid: () => void;
+  /** Layar penuh: tombol zoom disusun mendatar di pojok kanan bawah. */
+  fullscreen?: boolean;
   /** Elemen melayang di atas grafik (persamaan, tombol layar penuh). */
   children?: ReactNode;
 }
 
-export function QuadraticBoard({ q, show, step, onChange, onToggleGrid, children }: Props) {
+export function QuadraticBoard({ q, show, step, sizes, onChange, onToggleGrid, fullscreen = false, children }: Props) {
   // Papan membaca keadaan terbaru lewat ref, jadi elemen JSXGraph cukup dibuat sekali.
-  const live = useRef({ q, show, step });
-  live.current = { q, show, step };
+  const live = useRef({ q, show, step, sizes });
+  live.current = { q, show, step, sizes };
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const scene = useRef<Scene | null>(null);
@@ -83,11 +92,13 @@ export function QuadraticBoard({ q, show, step, onChange, onToggleGrid, children
   const applyView = () => {
     const s = scene.current;
     if (!s) return;
-    const { q: cur, show: v } = live.current;
+    const { q: cur, show: v, sizes: z } = live.current;
     const d = derive(cur);
     s.grid.setAttribute({ visible: v.grid });
     s.axes.forEach((axis) => axis.defaultTicks.setAttribute({ visible: v.axisNumbers, drawLabels: v.axisNumbers }));
-    s.curve.setAttribute({ visible: v.curve });
+    s.curve.setAttribute({ visible: v.curve, strokeWidth: z.curve });
+    s.reference.setAttribute({ strokeWidth: Math.max(1, z.curve / 2) });
+    [s.vertex, ...s.roots, s.intercept].forEach((el) => el.setAttribute({ size: z.point }));
     s.reference.setAttribute({ visible: v.reference });
     s.symmetry.setAttribute({ visible: v.symmetry && d.isQuad });
     const item = (el: El, label: El, on: boolean) => {
@@ -208,7 +219,7 @@ export function QuadraticBoard({ q, show, step, onChange, onToggleGrid, children
     syncPoints();
     applyView();
     boardRef.current?.update();
-  }, [q, show, step, boardRef]);
+  }, [q, show, step, sizes, boardRef]);
 
   useEffect(
     () => () => {
@@ -239,7 +250,7 @@ export function QuadraticBoard({ q, show, step, onChange, onToggleGrid, children
         role="img"
         aria-label="Grafik fungsi kuadrat. Seret titik berwarna untuk mengubah parabola, seret latar untuk menggeser, gulir atau cubit untuk memperbesar."
       />
-      <BoardControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={resetView} grid={show.grid} onToggleGrid={onToggleGrid} />
+      <BoardControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={resetView} grid={show.grid} onToggleGrid={onToggleGrid} horizontal={fullscreen} />
       {children}
     </div>
   );

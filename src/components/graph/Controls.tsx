@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { MinusIcon, PlusIcon } from "../ui/Icons";
 
 export function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
@@ -47,5 +48,37 @@ export function Check({ checked, onChange, children }: { checked: boolean; onCha
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="size-5 accent-brand" />
       {children}
     </label>
+  );
+}
+
+interface SizeStepperProps {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+}
+
+/** Atur ukuran dengan tombol − dan +; pratinjau garis atau titik ikut berubah di grafik. */
+export function SizeStepper({ label, value, min, max, onChange }: SizeStepperProps) {
+  const btn =
+    "grid size-11 place-items-center bg-white text-ink transition-colors duration-150 hover:bg-brand hover:text-white disabled:text-muted disabled:hover:bg-white disabled:hover:text-muted";
+  return (
+    <div className="flex min-h-11 items-center justify-between gap-3">
+      <span className="text-[16px] text-ink" id={`ukuran-${label}`}>
+        {label}
+      </span>
+      <div role="group" aria-labelledby={`ukuran-${label}`} className="flex items-center gap-0.5">
+        <button type="button" className={btn} aria-label={`Kurangi ${label.toLowerCase()}`} disabled={value <= min} onClick={() => onChange(Math.max(min, value - 1))}>
+          <MinusIcon width={16} height={16} />
+        </button>
+        <output className="w-9 bg-white py-2.5 text-center font-math text-[17px] text-ink" aria-live="polite">
+          {value}
+        </output>
+        <button type="button" className={btn} aria-label={`Tambah ${label.toLowerCase()}`} disabled={value >= max} onClick={() => onChange(Math.min(max, value + 1))}>
+          <PlusIcon width={16} height={16} />
+        </button>
+      </div>
+    </div>
   );
 }

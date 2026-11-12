@@ -20,6 +20,11 @@ export function stepValue(value: number, step: number, dir: 1 | -1): number {
 
 const plain = (v: number) => fmt(v, 4).replace("−", "-");
 
+/** Keypad desimal iOS tidak punya tanda minus, jadi di sana dipakai keypad teks supaya nilai negatif bisa diketik. */
+const isIos = () =>
+  typeof navigator !== "undefined" &&
+  (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+
 /** Kolom angka: bisa diketik langsung, nilai di luar rentang slider tetap diterima. */
 export function NumberField({ value, onCommit, label }: { value: number; onCommit: (v: number) => void; label: string }) {
   const [text, setText] = useState(plain(value));
@@ -32,8 +37,13 @@ export function NumberField({ value, onCommit, label }: { value: number; onCommi
   return (
     <input
       type="text"
-      inputMode="decimal"
+      inputMode={isIos() ? "text" : "decimal"}
+      enterKeyHint="done"
+      autoComplete="off"
       aria-label={label}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+      }}
       value={text}
       onFocus={(e) => {
         setFocused(true);
@@ -46,7 +56,7 @@ export function NumberField({ value, onCommit, label }: { value: number; onCommi
         const v = Number(raw.replace("−", "-").replace(",", "."));
         if (raw.trim() !== "" && Number.isFinite(v) && Math.abs(v) <= LIMIT) onCommit(v);
       }}
-      className="min-h-10 w-full bg-white px-2 text-center font-math text-[17px] text-ink transition-colors hover:bg-line/50"
+      className="min-h-10 w-full bg-white px-2 pointer-coarse:min-h-11 text-center font-math text-[17px] text-ink transition-colors hover:bg-line/50"
     />
   );
 }
@@ -69,7 +79,7 @@ export function ParamSlider({ tex, value, min, max, step, onChange, compact = fa
   const id = useId();
   const name = tex.replace(/[_{}]/g, "");
   const v = Math.min(max, Math.max(min, value));
-  const size = compact ? "size-9" : "size-10";
+  const size = "size-10 pointer-coarse:size-11";
 
   const minus = (
     <button type="button" className={`${stepBtn} ${size}`} aria-label={`Kurangi ${name}`} onClick={() => onChange(stepValue(value, step, -1))}>
@@ -91,7 +101,7 @@ export function ParamSlider({ tex, value, min, max, step, onChange, compact = fa
       value={v}
       aria-label={`Slider ${name}`}
       onChange={(e) => onChange(parseFloat(e.target.value))}
-      className={`w-full accent-brand ${compact ? "min-h-9" : "min-h-9"}`}
+      className="min-h-9 w-full accent-brand pointer-coarse:min-h-11"
     />
   );
 
@@ -146,7 +156,7 @@ export function StepSelector({ value, onChange, small = false }: StepSelectorPro
             role="radio"
             aria-checked={on}
             onClick={() => onChange(s)}
-            className={`flex-1 px-2 font-medium transition-colors duration-150 ${small ? "min-h-8 text-[14px]" : "min-h-10 text-[15px]"} ${
+            className={`flex-1 px-2 font-medium transition-colors duration-150 ${small ? "min-h-8 text-[14px]" : "min-h-10 text-[15px]"} pointer-coarse:min-h-11 ${
               on ? "bg-ink text-white" : "bg-white text-ink hover:bg-brand hover:text-white"
             }`}
           >
