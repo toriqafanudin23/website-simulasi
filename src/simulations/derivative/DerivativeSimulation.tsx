@@ -124,7 +124,6 @@ export default function DerivativeSimulation() {
   const [animating, setAnimating] = useState(false);
 
   const { fn: fnKey, x0, h } = state;
-  const fn = FUNCS[fnKey];
   const d = useMemo(() => derive(state), [state]);
 
   /* Simpan di peramban dan di alamat, supaya tautan membawa keadaan simulasi. */
