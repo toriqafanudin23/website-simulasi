@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+/* Token mengikuti blog: hitam pekat untuk judul dan garis, abu untuk teks, latar abu muda untuk panel.
+   Aksen oranye blog diganti sky. Ganti --color-brand dan --color-link untuk mengubah aksen. */
+/* Ponsel lanskap: layar pendek dan lebar. */
+@custom-variant short (@media (max-height: 500px) and (orientation: landscape));
+
+@theme {
+  --color-ink: #000000;
+  --color-body: #4a4a4a;
+  --color-muted: #5a5a5a;
+  --color-brand: #0369a1;
+  --color-link: #0369a1;
+  --color-curve: #0ea5e9;
+  --color-tint: #f4f4f4;
+  --color-line: #d6d6d6;
+
+  --font-sans: "Rubik Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Libre Baskerville", Georgia, "Times New Roman", serif;
+  --font-math: "KaTeX_Main", "Latin Modern Math", "Times New Roman", serif;
+  --radius-*: initial;
+}
+
+@layer base {
+  body {
+    @apply bg-white font-sans text-body antialiased;
+  }
+  h1, h2, h3 {
+    @apply font-serif font-bold text-ink;
+  }
+  p { text-wrap: pretty; }
+  ::selection { @apply bg-brand text-white; }
+  :focus-visible { outline: 3px solid var(--color-curve); outline-offset: 2px; }
+  button { cursor: pointer; }
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+}
+
+@layer components {
+  /* Lebar isi 1140px. Gutter sama dengan padding kartu supaya latar kartu yang meluas ke samping
+     tidak keluar dari layar. */
+  .container-page {
+    @apply mx-auto w-full max-w-[1212px] px-5 md:px-9;
+  }
+  .link {
+    @apply text-link underline underline-offset-2 transition-colors hover:text-ink;
+  }
+  .katex { font-size: 1.1em; }
+}
+
+/* Muncul saat di-scroll: naik pelan dari bawah, sekali per elemen. */
+.reveal {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  transition:
+    opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms),
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms);
+}
+.reveal[data-in="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Kurva yang tergambar sendiri saat masuk layar. */
+.draw path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 1.8s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 200ms);
+}
+.draw[data-in="true"] path { stroke-dashoffset: 0; }
+
+.defer-paint {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
+}
+
+@keyframes logo-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .draw path { stroke-dashoffset: 0; transition: none; }
+}

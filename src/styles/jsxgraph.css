@@ -1,0 +1,30 @@
+/* Gaya minimal JSXGraph: tanpa bingkai dan sudut membulat, huruf LaTeX untuk angka dan label. */
+.jxgbox {
+  position: relative;
+  overflow: hidden;
+  background-color: #fff;
+  border: 0;
+  margin: 0;
+  touch-action: none;
+}
+.jxgbox svg text {
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.JXGtext {
+  font-family: "KaTeX_Main", "Latin Modern Math", "Times New Roman", serif;
+  background-color: transparent;
+  padding: 0;
+  margin: 0;
+}
+.JXGinfobox { border: 0; }
+.jxgbox :focus { outline: none; }
+
+/* Papan mengisi wadahnya. */
+.sim-board.jxgbox {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
